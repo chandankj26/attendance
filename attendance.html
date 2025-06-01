@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Attendance Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #f0f2f5, #dbeafe);
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #1e3a8a;
+    }
+    .input-group, .search-group, .date-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+    input[type="text"], input[type="number"], input[type="date"] {
+      padding: 10px 15px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 200px;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .input-group button {
+      background-color: #2563eb;
+      color: white;
+    }
+    .input-group button:hover {
+      background-color: #1d4ed8;
+    }
+    #studentTable {
+      margin-top: 10px;
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      padding: 10px 15px;
+      background: #e0f2fe;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .header-row span, .buttons span {
+      flex: 1;
+      text-align: center;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #eff6ff;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .col-id {
+      flex: 1;
+      text-align: center;
+    }
+    .col-name {
+      flex: 2;
+      text-align: center;
+    }
+    .col-actions {
+      flex: 2;
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+    }
+    .buttons button {
+      padding: 6px 10px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .present-btn {
+      background-color: #10b981;
+      color: white;
+    }
+    .present-btn:hover {
+      background-color: #059669;
+    }
+    .absent-btn {
+      background-color: #ef4444;
+      color: white;
+    }
+    .absent-btn:hover {
+      background-color: #dc2626;
+    }
+    .delete-btn {
+      background-color: #9ca3af;
+      color: white;
+    }
+    .delete-btn:hover {
+      background-color: #6b7280;
+    }
+    .summary {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+      color: #1e40af;
+    }
+    .history {
+      margin-top: 30px;
+      padding: 20px;
+      background: #fef9c3;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+    }
+    .history h3 {
+      margin-bottom: 10px;
+      color: #92400e;
+    }
+    .history ul li {
+      background: #fef3c7;
+      padding: 8px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      color: #78350f;
+    }
+    .search-group button {
+      background-color: #6366f1;
+      color: white;
+    }
+    .search-group button:hover {
+      background-color: #4f46e5;
+    }
+    @media (max-width: 600px) {
+      .input-group, .search-group, .date-picker {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .col-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎓 Attendance Tracker</h1>
+
+    <div class="input-group">
+      <input type="number" id="studentId" placeholder="Student ID" min="0" step="1" />
+      <input type="text" id="studentName" placeholder="Student Name" />
+      <button onclick="addStudent()">Add</button>
+      <button onclick="exportCSV()">Export CSV</button>
+    </div>
+
+    <div class="date-picker">
+      <label for="date">📅 Date:</label>
+      <input type="date" id="date" onchange="changeDate()" />
+    </div>
+
+    <div id="studentTable">
+      <div class="header-row">
+        <span class="col-id">Student ID</span>
+        <span class="col-name">Student Name</span>
+        <span class="col-actions">Actions</span>
+      </div>
+      <ul id="studentList"></ul>
+    </div>
+
+    <div class="summary">
+      Total: <span id="total">0</span> |
+      Present: <span id="present">0</span> |
+      Absent: <span id="absent">0</span>
+    </div>
+
+    <div class="search-group">
+      <input type="text" id="searchInput" placeholder="Search by student ID..." />
+      <button onclick="searchHistory()">Search</button>
+    </div>
+
+    <div class="history" id="historySection" style="display: none;">
+      <h3>📜 Attendance History for ID: <span id="historyId"></span></h3>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
+
+  <script>
+    let students = [];
+    let attendanceData = {};
+    let currentDate = new Date().toISOString().split("T")[0];
+
+    const dateInput = document.getElementById("date");
+
+    // Set date input constraints
+    dateInput.value = currentDate;
+    dateInput.max = currentDate;  // Prevent future date selection
+
+    window.onload = function () {
+      loadFromStorage();
+      renderList();
+    };
+
+    function changeDate() {
+      const selectedDate = dateInput.value;
+      if (selectedDate > currentDate) {
+        alert("You cannot select a future date for attendance.");
+        dateInput.value = currentDate;
+        return;
+      }
+      currentDate = selectedDate;
+      renderList();
+    }
+
+    function addStudent() {
+      const id = document.getElementById("studentId").value.trim();
+      const name = document.getElementById("studentName").value.trim();
+
+      if (!id || isNaN(id)) {
+        alert("Student ID must be a number.");
+        return;
+      }
+      if (!name) {
+        alert("Enter student name.");
+        return;
+      }
+
+      if (!students.some(s => s.id === id)) {
+        students.push({ id, name });
+      }
+
+      if (!attendanceData[currentDate]) {
+        attendanceData[currentDate] = [];
+      }
+
+      if (!attendanceData[currentDate].some(s => s.id === id)) {
+        attendanceData[currentDate].push({ id, name, status: null });
+      }
+
+      document.getElementById("studentId").value = "";
+      document.getElementById("studentName").value = "";
+      saveToStorage();
+      renderList();
+    }
+
+    function markStatus(index, status) {
+      if (!attendanceData[currentDate]) return;
+      attendanceData[currentDate][index].status = status;
+      saveToStorage();
+      renderList();
+    }
+
+    function renderList() {
+      const list = document.getElementById("studentList");
+      list.innerHTML = "";
+
+      const todaysList = attendanceData[currentDate] || [];
+      let present = 0, absent = 0;
+
+      todaysList.forEach((student, index) => {
+        const li = document.createElement("li");
+
+        const idSpan = document.createElement("span");
+        idSpan.textContent = student.id;
+        idSpan.className = "col-id";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = student.name;
+        nameSpan.className = "col-name";
+
+        const btns = document.createElement("div");
+        btns.className = "col-actions";
+
+        // Create Present Button
+        const presentBtn = document.createElement("button");
+        presentBtn.textContent = "Present";
+        presentBtn.className = "present-btn";
+        presentBtn.onclick = () => markStatus(index, "present");
+
+        // Create Absent Button
+        const absentBtn = document.createElement("button");
+        absentBtn.textContent = "Absent";
+        absentBtn.className = "absent-btn";
+        absentBtn.onclick = () => markStatus(index, "absent");
+
+        // Delete Button
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "🗑️";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.onclick = () => {
+          if (confirm(`Delete ${student.name} from today's list?`)) {
+            attendanceData[currentDate].splice(index, 1);
+            saveToStorage();
+            renderList();
+          }
+        };
+
+        // Show/Hide buttons based on status
+        if (student.status === "present") {
+          btns.appendChild(presentBtn);
+          btns.appendChild(deleteBtn);
+          // Hide Absent button when present
+        } else if (student.status === "absent") {
+          btns.appendChild(absentBtn);
+          btns.appendChild(deleteBtn);
+          // Hide Present button when absent
+        } else {
+          // No status yet, show both buttons
+          btns.appendChild(presentBtn);
+          btns.appendChild(absentBtn);
+          btns.appendChild(deleteBtn);
+        }
+
+        li.appendChild(idSpan);
+        li.appendChild(nameSpan);
+        li.appendChild(btns);
+        list.appendChild(li);
+
+        if (student.status === "present") present++;
+        if (student.status === "absent") absent++;
+      });
+
+      document.getElementById("total").textContent = todaysList.length;
+      document.getElementById("present").textContent = present;
+      document.getElementById("absent").textContent = absent;
+    }
+
+    function saveToStorage() {
+      localStorage.setItem("attendance_students", JSON.stringify(students));
+      localStorage.setItem("attendance_data", JSON.stringify(attendanceData));
+    }
+
+    function loadFromStorage() {
+      const studentsData = localStorage.getItem("attendance_students");
+      const attendanceStored = localStorage.getItem("attendance_data");
+
+      students = studentsData ? JSON.parse(studentsData) : [];
+      attendanceData = attendanceStored ? JSON.parse(attendanceStored) : {};
+    }
+
+    function exportCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Date,Student ID,Student Name,Status\n";
+
+      Object.keys(attendanceData).forEach(date => {
+        attendanceData[date].forEach(student => {
+          const status = student.status ? student.status : "Not Marked";
+          csvContent += `${date},${student.id},${student.name},${status}\n`;
+        });
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "attendance.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function searchHistory() {
+      const searchId = document.getElementById("searchInput").value.trim();
+      if (!searchId) {
+        alert("Enter a Student ID to search.");
+        return;
+      }
+
+      if (isNaN(searchId)) {
+        alert("Student ID must be a number.");
+        return;
+      }
+
+      const historySection = document.getElementById("historySection");
+      const historyList = document.getElementById("historyList");
+      const historyId = document.getElementById("historyId");
+      historyList.innerHTML = "";
+      historyId.textContent = searchId;
+
+      let found = false;
+
+      // Show entire history for the student ID (all dates)
+      Object.keys(attendanceData).sort().forEach(date => {
+        attendanceData[date].forEach(student => {
+          if (student.id === searchId) {
+            found = true;
+            const li = document.createElement("li");
+            const status = student.status ? student.status : "Not Marked";
+            li.textContent = `${date}: ${student.name} — ${status}`;
+            historyList.appendChild(li);
+          }
+        });
+      });
+
+      if (!found) {
+        historyList.innerHTML = `<li>No attendance record found for ID: ${searchId}</li>`;
+      }
+
+      historySection.style.display = "block";
+    }
+  </script>
+</body>
+</html>
